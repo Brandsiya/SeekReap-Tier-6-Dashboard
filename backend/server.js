@@ -2,7 +2,6 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { Pool } = require('pg');
-const path = require('path');
 
 const app = express();
 app.use(cors());
@@ -41,12 +40,9 @@ app.post('/api/submit', async (req, res) => {
   }
 });
 
-// Serve React build
-app.use(express.static(path.join(__dirname, 'public')));
-
-// Fallback for React Router (Express 5 safe)
-app.use((req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+// Simple root route for backend health check
+app.get('/', (req, res) => {
+  res.json({ message: "SeekReap Tier-6 Backend Running 🚀" });
 });
 
 const PORT = process.env.PORT || 10000;
