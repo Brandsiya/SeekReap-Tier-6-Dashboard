@@ -41,9 +41,11 @@ app.post('/api/submit', async (req, res) => {
   }
 });
 
-// Serve React frontend
+// Serve React build
 app.use(express.static(path.join(__dirname, 'public')));
-app.get('*', (req, res) => {
+
+// Fallback for React Router (Express 5 safe)
+app.use((req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
