@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { Pool } = require('pg');
+const path = require('path');
 
 const app = express();
 app.use(cors());
@@ -12,9 +13,14 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false }
 });
 
+// API routes
 app.get('/api/submissions', async (req, res) => {
-  try { const result = await pool.query('SELECT * FROM job_queue ORDER BY job_id DESC'); res.json(result.rows); } 
-  catch (err) { res.status(500).json({ error: err.message }); }
+  try {
+    const result = await pool.query('SELECT * FROM job_queue ORDER BY job_id DESC');
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.post('/api/submit', async (req, res) => {
@@ -30,8 +36,16 @@ app.post('/api/submit', async (req, res) => {
       [creator_id, content_id, job_type, status || 'pending']
     );
     res.json({ success: true });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-const PORT = process.env.PORT || 10001;
+// Serve React frontend
+app.use(express.static(path.join(__dirname, 'public')));
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`Dashboard backend running on port ${PORT}`));
