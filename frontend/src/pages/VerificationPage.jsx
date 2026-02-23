@@ -11,7 +11,8 @@ export default function VerificationPage() {
   useEffect(() => {
     const fetchJob = async () => {
       try {
-        const res = await fetch(`http://localhost:5000/api/submissions/${jobId}`);
+        const API_BASE = process.env.REACT_APP_API_URL;
+        const res = await fetch(`${API_BASE}/api/submissions/${jobId}`);
         const data = await res.json();
         setJob(data);
         setLoading(false);
