@@ -31,7 +31,13 @@ function UploadPage() {
     console.error("Full error:", err);
     console.error("Error message:", err.message);
     if (err.response) console.error("Response data:", err.response.data);
-      setStatus('Error submitting job.');
+      console.error('Upload error:', err);
+    if (err.response) {
+      console.error('Response data:', err.response.data);
+      setStatus(`Error: ${err.response.data.error || err.message}`);
+    } else {
+      setStatus(`Error: ${err.message}`);
+    }
     }
   };
 
