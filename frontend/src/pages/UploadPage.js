@@ -9,7 +9,8 @@ function UploadPage() {
 
   const submit = async () => {
     const formData = new FormData();
-    if (file) formData.append('videoFile', file);
+    if (file) formData.append('video', file);
+    formData.append('creator_id', '1');
     if (url) formData.append('youtubeUrl', url);
 
     setStatus('Submitting...');
