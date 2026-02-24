@@ -28,6 +28,9 @@ function UploadPage() {
 
       navigate(`/verify/${data.id}`);
     } catch (err) {
+    console.error("Full error:", err);
+    console.error("Error message:", err.message);
+    if (err.response) console.error("Response data:", err.response.data);
       setStatus('Error submitting job.');
     }
   };
