@@ -49,7 +49,7 @@ const CreatorUploadPage = () => {
         throw new Error('Please provide a valid file or URL.');
       }
 
-      const response = await axios.post('/api/submissions', formData, {
+      const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/submit`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 

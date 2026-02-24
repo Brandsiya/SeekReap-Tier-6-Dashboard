@@ -16,7 +16,7 @@ function UploadPage() {
 
     try {
         const API_BASE = process.env.REACT_APP_API_URL;
-        const res = await fetch(`${API_BASE}/api/submissions`, {
+        const res = await fetch(`${API_BASE}/api/submit`, {
         method: 'POST',
         body: formData,
       });
