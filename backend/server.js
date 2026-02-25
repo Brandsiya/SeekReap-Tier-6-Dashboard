@@ -759,3 +759,58 @@ app.listen(PORT, () => {
   console.log(`   - GET  /api/admin/appeals/pending (NEW)`);
   console.log(`   - PATCH /api/admin/appeals/:id/status (NEW)`);
 });
+
+// =====================================================
+// ADDITIONAL HEALTH ENDPOINTS FOR ROBUSTNESS
+// =====================================================
+
+// Multiple health endpoint variations
+app.get('/health', (req, res) => {
+  console.log('✅ Health endpoint accessed at /health');
+  res.json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    endpoints: [
+      '/api/submissions',
+      '/api/submit',
+      '/api/precheck',
+      '/api/precheck/:id',
+      '/api/creator/:id/prechecks',
+      '/api/appeals',
+      '/api/appeals/:id',
+      '/api/appeals/:id/evidence',
+      '/api/creator/:id/appeals',
+      '/api/creator/:id/dashboard',
+      '/api/policies',
+      '/api/admin/appeals/pending',
+      '/api/admin/appeals/:id/status'
+    ]
+  });
+});
+
+// Also handle /api/health for compatibility
+app.get('/api/health', (req, res) => {
+  console.log('✅ Health endpoint accessed at /api/health');
+  res.redirect('/health');
+});
+
+// Catch-all for debugging - log any 404s
+app.use((req, res, next) => {
+  console.log(`❌ 404 Not Found: ${req.method} ${req.url}`);
+  res.status(404).json({ 
+    error: 'Not Found',
+    message: `Endpoint ${req.method} ${req.url} does not exist`,
+    available_endpoints: [
+      '/',
+      '/health',
+      '/api/health',
+      '/api/submissions',
+      '/api/submit',
+      '/api/precheck',
+      '/api/appeals',
+      '/api/policies',
+      '/api/creator/:id/dashboard',
+      '/api/admin/appeals/pending'
+    ]
+  });
+});
