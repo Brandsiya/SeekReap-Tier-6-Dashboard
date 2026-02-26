@@ -11,7 +11,7 @@ export default function VerificationPage() {
   useEffect(() => {
     const fetchJob = async () => {
       try {
-        const API_BASE = process.env.REACT_APP_API_URL;
+        const API_BASE = process.env.REACT_APP_API_URL || "https://seekreap.onrender.com";
         const res = await fetch(`${API_BASE}/api/submissions/${jobId}`);
         const data = await res.json();
         setJob(data);
