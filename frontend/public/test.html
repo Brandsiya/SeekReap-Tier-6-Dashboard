@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Tier-6 Connection Test</title>
+    <style>
+        body { font-family: Arial; margin: 40px; background: #1a202c; color: #e2e8f0; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .card { background: #2d3748; padding: 20px; border-radius: 10px; margin: 20px 0; }
+        button { background: #4299e1; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; }
+        pre { background: #1a202c; padding: 10px; border-radius: 5px; overflow: auto; }
+        .success { color: #48bb78; }
+        .error { color: #f56565; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔌 Tier-6 Connection Test</h1>
+        
+        <div class="card">
+            <h2>Backend Connection (Port 3002)</h2>
+            <button onclick="testBackend()">Test Backend</button>
+            <pre id="backend-result">Click button to test</pre>
+        </div>
+
+        <div class="card">
+            <h2>Create Test Job</h2>
+            <input type="text" id="content-id" placeholder="Content ID" value="test-123">
+            <button onclick="createJob()">Create Job</button>
+            <pre id="job-result">Click button to create job</pre>
+        </div>
+
+        <div class="card">
+            <h2>Fetch Jobs</h2>
+            <button onclick="fetchJobs()">Fetch Jobs</button>
+            <pre id="jobs-result">Click button to fetch jobs</pre>
+        </div>
+    </div>
+
+    <script>
+        const BACKEND_URL = 'http://localhost:3002';
+
+        async function testBackend() {
+            const result = document.getElementById('backend-result');
+            result.textContent = 'Testing...';
+            try {
+                const response = await fetch(BACKEND_URL);
+                const data = await response.json();
+                result.innerHTML = '<span class="success">✅ Success!</span>\n' + JSON.stringify(data, null, 2);
+            } catch (err) {
+                result.innerHTML = '<span class="error">❌ Error:</span>\n' + err.message;
+            }
+        }
+
+        async function createJob() {
+            const result = document.getElementById('job-result');
+            const contentId = document.getElementById('content-id').value;
+            result.textContent = 'Creating...';
+            try {
+                const response = await fetch(BACKEND_URL + '/api/submit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content_id: contentId, job_type: 'video' })
+                });
+                const data = await response.json();
+                result.innerHTML = '<span class="success">✅ Job created!</span>\n' + JSON.stringify(data, null, 2);
+            } catch (err) {
+                result.innerHTML = '<span class="error">❌ Error:</span>\n' + err.message;
+            }
+        }
+
+        async function fetchJobs() {
+            const result = document.getElementById('jobs-result');
+            result.textContent = 'Fetching...';
+            try {
+                const response = await fetch(BACKEND_URL + '/api/submissions');
+                const data = await response.json();
+                result.innerHTML = '<span class="success">✅ Jobs fetched!</span>\n' + JSON.stringify(data, null, 2);
+            } catch (err) {
+                result.innerHTML = '<span class="error">❌ Error:</span>\n' + err.message;
+            }
+        }
+    </script>
+</body>
+</html>
