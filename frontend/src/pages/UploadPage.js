@@ -8,7 +8,10 @@ export default function UploadPage() {
   const [status, setStatus] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e) => {
+    // Prevent default form submission
+    e.preventDefault();
+    
     // Prevent multiple submissions
     if (isSubmitting) return;
     
@@ -32,7 +35,6 @@ export default function UploadPage() {
         response = await fetch(`${API_BASE}/api/submit`, {
           method: 'POST',
           body: formData
-          // Don't set Content-Type header - browser will set it with boundary
         });
       } else {
         // Handle URL submission with JSON
@@ -68,63 +70,65 @@ export default function UploadPage() {
     <div style={{ padding: '2rem', maxWidth: '600px', margin: '0 auto' }}>
       <h1>Upload Video for Verification</h1>
       
-      <div style={{ marginBottom: '2rem' }}>
-        <h3>Option 1: Upload Video File</h3>
-        <input
-          type="file"
-          accept="video/*"
-          onChange={(e) => {
-            setFile(e.target.files[0]);
-            setUrl(''); // Clear URL when file is selected
+      <form onSubmit={handleSubmit}>
+        <div style={{ marginBottom: '2rem' }}>
+          <h3>Option 1: Upload Video File</h3>
+          <input
+            type="file"
+            accept="video/*"
+            onChange={(e) => {
+              setFile(e.target.files[0]);
+              setUrl('');
+            }}
+            disabled={isSubmitting}
+          />
+          {file && <p>Selected: {file.name}</p>}
+        </div>
+        
+        <div style={{ marginBottom: '2rem' }}>
+          <h3>Option 2: YouTube URL</h3>
+          <input
+            type="url"
+            placeholder="https://youtube.com/watch?v=..."
+            value={url}
+            onChange={(e) => {
+              setUrl(e.target.value);
+              setFile(null);
+            }}
+            disabled={isSubmitting}
+            style={{ width: '100%', padding: '0.5rem', fontSize: '1rem' }}
+          />
+        </div>
+        
+        <button
+          type="submit"
+          disabled={isSubmitting || (!file && !url)}
+          style={{
+            padding: '0.75rem 1.5rem',
+            background: '#007bff',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            fontSize: '1rem',
+            cursor: (isSubmitting || (!file && !url)) ? 'not-allowed' : 'pointer',
+            opacity: (isSubmitting || (!file && !url)) ? 0.6 : 1
           }}
-          disabled={isSubmitting}
-        />
-        {file && <p>Selected: {file.name}</p>}
-      </div>
-      
-      <div style={{ marginBottom: '2rem' }}>
-        <h3>Option 2: YouTube URL</h3>
-        <input
-          type="url"
-          placeholder="https://youtube.com/watch?v=..."
-          value={url}
-          onChange={(e) => {
-            setUrl(e.target.value);
-            setFile(null); // Clear file when URL is entered
-          }}
-          disabled={isSubmitting}
-          style={{ width: '100%', padding: '0.5rem', fontSize: '1rem' }}
-        />
-      </div>
-      
-      <button
-        onClick={handleSubmit}
-        disabled={isSubmitting || (!file && !url)}
-        style={{
-          padding: '0.75rem 1.5rem',
-          background: '#007bff',
-          color: 'white',
-          border: 'none',
-          borderRadius: '4px',
-          fontSize: '1rem',
-          cursor: (isSubmitting || (!file && !url)) ? 'not-allowed' : 'pointer',
-          opacity: (isSubmitting || (!file && !url)) ? 0.6 : 1
-        }}
-      >
-        {isSubmitting ? 'Submitting...' : 'Submit'}
-      </button>
-      
-      {status && (
-        <p style={{ 
-          marginTop: '1rem', 
-          padding: '0.5rem',
-          background: status.includes('Error') ? '#ffebee' : '#e8f5e8',
-          color: status.includes('Error') ? '#c62828' : '#2e7d32',
-          borderRadius: '4px'
-        }}>
-          {status}
-        </p>
-      )}
+        >
+          {isSubmitting ? 'Submitting...' : 'Submit'}
+        </button>
+        
+        {status && (
+          <p style={{ 
+            marginTop: '1rem', 
+            padding: '0.5rem',
+            background: status.includes('Error') ? '#ffebee' : '#e8f5e8',
+            color: status.includes('Error') ? '#c62828' : '#2e7d32',
+            borderRadius: '4px'
+          }}>
+            {status}
+          </p>
+        )}
+      </form>
     </div>
   );
 }
