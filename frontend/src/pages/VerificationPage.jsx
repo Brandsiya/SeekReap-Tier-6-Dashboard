@@ -12,11 +12,14 @@ export default function VerificationPage() {
   useEffect(() => {
     const fetchJob = async () => {
       try {
-        // FIXED: Use environment variable with correct fallback
+        // CRITICAL: Use environment variable with fallback
         const API_BASE = process.env.REACT_APP_API_URL || 'https://seekreap.onrender.com';
         
-        // FIXED: Properly construct the URL
-        const res = await fetch(`${API_BASE}/api/submissions/${jobId}`);
+        // Make sure we're using the full URL
+        const url = `${API_BASE}/api/submissions/${jobId}`;
+        console.log('Fetching:', url); // This will help debug
+        
+        const res = await fetch(url);
         
         if (!res.ok) {
           throw new Error(`Failed to fetch job: ${res.status}`);
@@ -79,7 +82,6 @@ export default function VerificationPage() {
     );
   }
 
-  // Display job results
   return (
     <div style={{ padding: '2rem' }}>
       <h1>Verification Results</h1>
