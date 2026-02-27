@@ -10,31 +10,36 @@ export default function VerificationPage() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const fetchJob = async () => {
-      try {
-        // CRITICAL: Use environment variable with fallback
-        const API_BASE = process.env.REACT_APP_API_URL || 'https://seekreap.onrender.com';
-        
-        // Make sure we're using the full URL
-        const url = `${API_BASE}/api/submissions/${jobId}`;
-        console.log('Fetching:', url); // This will help debug
-        
-        const res = await fetch(url);
-        
-        if (!res.ok) {
-          throw new Error(`Failed to fetch job: ${res.status}`);
-        }
-        
-        const data = await res.json();
-        setJob(data);
-        setLoading(false);
-        setError(null);
-      } catch (err) {
-        console.error('Error fetching job:', err);
-        setError(err.message);
-        setLoading(false);
-      }
-    };
+
+const fetchJob = async () => {
+  try {
+    // Clean the jobId - remove any quotes or extra characters
+    const cleanJobId = String(jobId).replace(/[^0-9]/g, '');
+    console.log('Original jobId:', jobId, 'Cleaned:', cleanJobId);
+    
+    // CRITICAL: Use environment variable with fallback
+    const API_BASE = process.env.REACT_APP_API_URL || 'https://seekreap.onrender.com';
+
+    // Make sure we're using the full URL with cleaned ID
+    const url = `${API_BASE}/api/submissions/${cleanJobId}`;
+    console.log('Fetching:', url);
+
+    const res = await fetch(url);
+
+    if (!res.ok) {
+      throw new Error(`Failed to fetch job: ${res.status}`);
+    }
+
+    const data = await res.json();
+    setJob(data);
+    setLoading(false);
+    setError(null);
+  } catch (err) {
+    console.error('Error fetching job:', err);
+    setError(err.message);
+    setLoading(false);
+  }
+};
 
     fetchJob();
     const interval = setInterval(fetchJob, POLL_INTERVAL);
