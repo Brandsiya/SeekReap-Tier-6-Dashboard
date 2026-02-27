@@ -222,7 +222,7 @@ app.use('/uploads', express.static('uploads'));
 
 // Start server - BIND TO 0.0.0.0 for Render!
 const PORT = process.env.PORT || 3002;
-app.listen(PORT, '0.0.0.0', () => {
+app.listen(PORT, '0.0.0.0', '0.0.0.0', () => {
   console.log(`✅ SeekReap Tier-6 Backend running on port ${PORT}`);
   console.log(`📡 API endpoints available:`);
   console.log(`   - GET  /health`);
