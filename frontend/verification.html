@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Processing - SeekReap</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        .verification-container {
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 30px;
+            text-align: center;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .status-message {
+            font-size: 18px;
+            color: #333;
+            margin: 20px 0;
+        }
+        
+        .job-id {
+            color: #666;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+        
+        .progress-container {
+            width: 100%;
+            height: 20px;
+            background-color: #f0f0f0;
+            border-radius: 10px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+        
+        .progress-bar {
+            width: 0%;
+            height: 100%;
+            background-color: #4CAF50;
+            transition: width 0.3s ease;
+        }
+        
+        .error-message {
+            color: #f44336;
+            padding: 15px;
+            border: 1px solid #f44336;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        
+        .success-message {
+            color: #4CAF50;
+            padding: 15px;
+            border: 1px solid #4CAF50;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        
+        .retry-button {
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            padding: 10px 30px;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        
+        .retry-button:hover {
+            background-color: #1976D2;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/" class="nav-brand">SeekReap</a>
+            <div class="nav-links">
+                <a href="/upload.html" class="nav-link">Upload</a>
+                <a href="/dashboard.html" class="nav-link">Dashboard</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="verification-container">
+            <h1>Processing Your Video</h1>
+            
+            <div class="spinner"></div>
+            
+            <div class="status-message" id="status-message">
+                Initializing...
+            </div>
+            
+            <div class="progress-container">
+                <div class="progress-bar" id="progress-bar"></div>
+            </div>
+            
+            <div id="error-container" style="display: none;">
+                <div class="error-message" id="error-message"></div>
+                <button class="retry-button" onclick="retryUpload()">Try Again</button>
+            </div>
+            
+            <div id="success-container" style="display: none;">
+                <div class="success-message" id="success-message"></div>
+            </div>
+            
+            <div class="job-id" id="job-id-display"></div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const CONFIG = {
+            API_BASE: 'https://seekreap.onrender.com',
+            POLL_INTERVAL: 3000
+        };
+
+        let currentJobId = null;
+        let pollTimeout = null;
+
+        // Get job ID from URL
+        function getJobIdFromUrl() {
+            // Check URL parameters first
+            const urlParams = new URLSearchParams(window.location.search);
+            const jobId = urlParams.get('jobId');
+            
+            if (jobId) return jobId;
+            
+            // Check if it's in the path (like /verify/135)
+            const pathParts = window.location.pathname.split('/');
+            const lastPart = pathParts[pathParts.length - 1];
+            
+            // Return if it looks like a job ID (numbers only)
+            if (lastPart && lastPart.match(/^\d+$/)) {
+                return lastPart;
+            }
+            
+            return null;
+        }
+
+        // Show error message
+        function showError(message) {
+            document.getElementById('status-message').style.display = 'none';
+            document.getElementById('error-container').style.display = 'block';
+            document.getElementById('error-message').textContent = message;
+            document.querySelector('.spinner').style.display = 'none';
+        }
+
+        // Show success message
+        function showSuccess(message) {
+            document.getElementById('status-message').style.display = 'none';
+            document.getElementById('success-container').style.display = 'block';
+            document.getElementById('success-message').textContent = message;
+            document.querySelector('.spinner').style.display = 'none';
+            document.getElementById('progress-bar').style.width = '100%';
+        }
+
+        // Update UI based on job status
+        function updateStatusUI(job) {
+            const statusEl = document.getElementById('status-message');
+            const progressEl = document.getElementById('progress-bar');
+            
+            // Map status to display messages
+            const statusMessages = {
+                'queued': '📋 Job queued - waiting to start...',
+                'pending': '⏳ Preparing to process...',
+                'processing': '⚙️ Processing your video...',
+                'completed': '✅ Complete! Redirecting...',
+                'failed': '❌ Processing failed',
+                'retrying': '🔄 Retrying...'
+            };
+            
+            statusEl.textContent = statusMessages[job.status] || `Status: ${job.status}`;
+            
+            // Map status to progress percentage
+            const progressMap = {
+                'queued': 10,
+                'pending': 25,
+                'processing': 60,
+                'completed': 100,
+                'failed': 100
+            };
+            
+            progressEl.style.width = (progressMap[job.status] || 0) + '%';
+            
+            // Show job ID
+            document.getElementById('job-id-display').textContent = `Job ID: ${job.job_id}`;
+        }
+
+        // Poll for job status
+        function pollStatus(jobId) {
+            console.log('Polling for job:', jobId);
+            
+            fetch(`${CONFIG.API_BASE}/api/submissions`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(submissions => {
+                    console.log('Got submissions:', submissions);
+                    
+                    // Find the specific job by job_id
+                    const job = submissions.find(s => s.job_id === jobId);
+                    
+                    if (!job) {
+                        console.log('Job not found yet, retrying...');
+                        document.getElementById('status-message').textContent = '⏳ Waiting for job to appear...';
+                        pollTimeout = setTimeout(() => pollStatus(jobId), CONFIG.POLL_INTERVAL);
+                        return;
+                    }
+                    
+                    console.log('Found job:', job);
+                    
+                    // Update UI with job data
+                    updateStatusUI(job);
+                    
+                    // Handle different statuses
+                    switch(job.status) {
+                        case 'completed':
+                            showSuccess('Processing complete! Redirecting to results...');
+                            setTimeout(() => {
+                                window.location.href = `/results.html?jobId=${jobId}`;
+                            }, 2000);
+                            break;
+                            
+                        case 'failed':
+                            showError(job.failure_reason || 'Processing failed. Please try again.');
+                            break;
+                            
+                        case 'processing':
+                        case 'queued':
+                        case 'pending':
+                        default:
+                            // Still processing - poll again
+                            pollTimeout = setTimeout(() => pollStatus(jobId), CONFIG.POLL_INTERVAL);
+                            break;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error polling status:', error);
+                    document.getElementById('status-message').textContent = '⚠️ Connection error. Retrying...';
+                    pollTimeout = setTimeout(() => pollStatus(jobId), CONFIG.POLL_INTERVAL * 2);
+                });
+        }
+
+        // Retry the upload
+        function retryUpload() {
+            window.location.href = '/upload.html';
+        }
+
+        // Clean up on page unload
+        window.addEventListener('beforeunload', function() {
+            if (pollTimeout) {
+                clearTimeout(pollTimeout);
+            }
+        });
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            const jobId = getJobIdFromUrl();
+            
+            if (jobId) {
+                currentJobId = jobId;
+                document.getElementById('job-id-display').textContent = `Job ID: ${jobId}`;
+                console.log('Starting to poll for job:', jobId);
+                pollStatus(jobId);
+            } else {
+                showError('No job ID provided. Please upload a video first.');
+            }
+        });
+    </script>
+</body>
+</html>
