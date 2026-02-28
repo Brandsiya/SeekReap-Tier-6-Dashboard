@@ -46,3 +46,5 @@ backend/*.log
 # Test files
 test.txt
 *.test.txt
+backend/.env
+.env
