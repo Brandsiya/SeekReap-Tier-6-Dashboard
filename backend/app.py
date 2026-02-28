@@ -1,16 +1,19 @@
 import os
 import logging
+import json
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 from dotenv import load_dotenv
-import redis
-from rq import Queue
 import psycopg2
-from psycopg2.extras import RealDictCursor
+from psycopg2.extras import RealDictCursor, Json
 import uuid
 from datetime import datetime
 import mimetypes
 import werkzeug
+import asyncio
+import asyncpg
+from pgqueuer.db import AsyncpgDriver
+from pgqueuer.queries import Queries
 
 # Load environment variables
 load_dotenv()
@@ -25,22 +28,6 @@ CORS(app, origins=[FRONTEND_URL])
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-# Redis connection
-REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379')
-if REDIS_URL:
-    try:
-        redis_conn = redis.from_url(REDIS_URL)
-        queue = Queue('video_processing', connection=redis_conn)
-        logger.info(f"Connected to Redis at {REDIS_URL}")
-    except Exception as e:
-        logger.error(f"Redis connection error: {e}")
-        redis_conn = None
-        queue = None
-else:
-    logger.warning("REDIS_URL not set, running without queue")
-    redis_conn = None
-    queue = None
 
 # Database connection
 def get_db():
@@ -101,19 +88,120 @@ def init_db():
 init_db()
 
 # ============================================
+# PGQUEUER JOB QUEUE FUNCTIONS
+# ============================================
+
+async def enqueue_video_job(job_id, file_path):
+    """Enqueue a video processing job using PGQueuer"""
+    DATABASE_URL = os.getenv('DATABASE_URL')
+    if not DATABASE_URL:
+        logger.error("DATABASE_URL not set, cannot enqueue job")
+        return None
+    
+    try:
+        conn = await asyncpg.connect(DATABASE_URL)
+        driver = AsyncpgDriver(conn)
+        queries = Queries(driver)
+        
+        job_data = {
+            'job_id': job_id,
+            'file_path': file_path
+        }
+        
+        await queries.enqueue(
+            ['video-process'],
+            [json.dumps(job_data).encode()],
+            [0]  # priority (0 = highest)
+        )
+        
+        await conn.close()
+        logger.info(f"✅ Enqueued video job {job_id} with PGQueuer")
+        return True
+        
+    except Exception as e:
+        logger.error(f"❌ Failed to enqueue video job {job_id}: {e}")
+        return None
+
+async def enqueue_url_job(job_id, url):
+    """Enqueue a URL processing job using PGQueuer"""
+    DATABASE_URL = os.getenv('DATABASE_URL')
+    if not DATABASE_URL:
+        logger.error("DATABASE_URL not set, cannot enqueue job")
+        return None
+    
+    try:
+        conn = await asyncpg.connect(DATABASE_URL)
+        driver = AsyncpgDriver(conn)
+        queries = Queries(driver)
+        
+        job_data = {
+            'job_id': job_id,
+            'url': url
+        }
+        
+        await queries.enqueue(
+            ['url-process'],
+            [json.dumps(job_data).encode()],
+            [0]  # priority (0 = highest)
+        )
+        
+        await conn.close()
+        logger.info(f"✅ Enqueued URL job {job_id} with PGQueuer")
+        return True
+        
+    except Exception as e:
+        logger.error(f"❌ Failed to enqueue URL job {job_id}: {e}")
+        return None
+
+# Helper to run async functions from sync context
+def run_async(coro):
+    """Run an async coroutine from a sync context"""
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        # No running loop, create new one
+        return asyncio.run(coro)
+    else:
+        # Already in async context, create task
+        return asyncio.create_task(coro)
+
+# ============================================
+# ROOT ENDPOINT
+# ============================================
+@app.route('/', methods=['GET'])
+def root():
+    """Root endpoint with API information"""
+    return jsonify({
+        'name': 'SeekReap Tier-6 Backend API',
+        'version': '1.0.0',
+        'status': 'operational',
+        'endpoints': [
+            '/',
+            '/health',
+            '/api/init-db',
+            '/api/submissions',
+            '/api/submissions/<job_id>',
+            '/api/upload',
+            '/api/upload/url',
+            '/api/results/<job_id>'
+        ],
+        'documentation': 'https://github.com/Brandsiya/SeekReap-Tier-6-Backend',
+        'timestamp': datetime.now().isoformat()
+    })
+
+# ============================================
 # HEALTH CHECK ENDPOINT
 # ============================================
 @app.route('/health', methods=['GET'])
 def health():
     """Health check endpoint"""
     db_status = "connected" if get_db() else "disconnected"
-    redis_status = "connected" if redis_conn else "disconnected"
     
     return jsonify({
         'status': 'healthy',
         'timestamp': datetime.now().isoformat(),
         'database': db_status,
-        'redis': redis_status,
+        'queue': 'pgqueuer',
         'frontend_url': FRONTEND_URL
     })
 
@@ -129,7 +217,8 @@ def initialize_database():
             return jsonify({
                 "message": "Database initialized successfully",
                 "tables": ["submissions"],
-                "status": "success"
+                "status": "success",
+                "timestamp": datetime.now().isoformat()
             })
         else:
             return jsonify({
@@ -228,7 +317,7 @@ def upload_file():
             1,  # Default creator_id
             content_id,
             'video',
-            {'filePath': upload_path, 'filename': filename, 'fileSize': os.path.getsize(upload_path)},
+            Json({'filePath': upload_path, 'filename': filename, 'fileSize': os.path.getsize(upload_path)}),
             'pending'
         ))
         
@@ -236,21 +325,14 @@ def upload_file():
         job_id = result['job_id']
         conn.commit()
         
-        # Queue the job for processing if Redis is available
-        redis_job_id = None
-        if queue:
-            try:
-                from worker import process_video
-                redis_job = queue.enqueue('process_video', job_id, upload_path)
-                redis_job_id = redis_job.id
-                
-                # Update with redis job id
-                cur.execute("UPDATE submissions SET redis_job_id = %s WHERE job_id = %s", 
-                           (redis_job_id, job_id))
-                conn.commit()
-                logger.info(f"Job {job_id} queued with Redis ID: {redis_job_id}")
-            except Exception as e:
-                logger.error(f"Failed to queue job {job_id}: {e}")
+        # Queue the job for processing using PGQueuer
+        try:
+            # Run async enqueue function
+            success = asyncio.run(enqueue_video_job(job_id, upload_path))
+            if success:
+                logger.info(f"Job {job_id} queued with PGQueuer")
+        except Exception as e:
+            logger.error(f"Failed to queue job {job_id}: {e}")
         
         cur.close()
         conn.close()
@@ -259,7 +341,6 @@ def upload_file():
             'job_id': job_id,
             'content_id': content_id,
             'status': 'pending',
-            'redis_job_id': redis_job_id,
             'message': 'Video uploaded successfully'
         }), 201
         
@@ -297,7 +378,7 @@ def upload_url():
             1,  # Default creator_id
             content_id,
             'url',
-            {'url': url},
+            Json({'url': url}),
             'pending'
         ))
         
@@ -305,21 +386,14 @@ def upload_url():
         job_id = result['job_id']
         conn.commit()
         
-        # Queue the job for processing if Redis is available
-        redis_job_id = None
-        if queue:
-            try:
-                from worker import process_url
-                redis_job = queue.enqueue('process_url', job_id, url)
-                redis_job_id = redis_job.id
-                
-                # Update with redis job id
-                cur.execute("UPDATE submissions SET redis_job_id = %s WHERE job_id = %s", 
-                           (redis_job_id, job_id))
-                conn.commit()
-                logger.info(f"Job {job_id} queued with Redis ID: {redis_job_id}")
-            except Exception as e:
-                logger.error(f"Failed to queue job {job_id}: {e}")
+        # Queue the job for processing using PGQueuer
+        try:
+            # Run async enqueue function
+            success = asyncio.run(enqueue_url_job(job_id, url))
+            if success:
+                logger.info(f"Job {job_id} queued with PGQueuer")
+        except Exception as e:
+            logger.error(f"Failed to queue job {job_id}: {e}")
         
         cur.close()
         conn.close()
@@ -328,7 +402,6 @@ def upload_url():
             'job_id': job_id,
             'content_id': content_id,
             'status': 'pending',
-            'redis_job_id': redis_job_id,
             'message': 'URL submitted successfully'
         }), 201
         
@@ -377,33 +450,11 @@ def get_results(job_id):
         return jsonify({'error': str(e)}), 500
 
 # ============================================
-# ROOT ENDPOINT
-# ============================================
-@app.route('/', methods=['GET'])
-def root():
-    """Root endpoint with API information"""
-    return jsonify({
-        'name': 'SeekReap Tier-6 Backend API',
-        'version': '1.0.0',
-        'status': 'operational',
-        'endpoints': [
-            '/health',
-            '/api/init-db',
-            '/api/submissions',
-            '/api/submissions/<job_id>',
-            '/api/upload',
-            '/api/upload/url',
-            '/api/results/<job_id>'
-        ],
-        'documentation': 'https://github.com/Brandsiya/SeekReap-Tier-6-Backend'
-    })
-
-# ============================================
 # ERROR HANDLERS
 # ============================================
 @app.errorhandler(404)
 def not_found(error):
-    return jsonify({'error': 'Not found'}), 404
+    return jsonify({'error': 'Not found', 'path': request.path}), 404
 
 @app.errorhandler(500)
 def internal_error(error):

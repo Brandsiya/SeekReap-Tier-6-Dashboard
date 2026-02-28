@@ -1,33 +1,22 @@
-# SeekReap Frontend
+# 🚀 SeekReap Tier-6 Backend
 
-Frontend for SeekReap content verification platform.
+Python Flask API for video content verification and processing.
 
-## Setup
+## 📋 Repository Purpose
 
-1. Clone this repository
-2. Open `index.html` in browser or serve with any static server
+This is the **Tier-6 Production Backend** - a Python Flask API that handles:
+- Video uploads and URL submissions
+- Job queuing with Redis
+- Database storage with PostgreSQL (Neon)
+- Background processing with RQ workers
+- API endpoints for the frontend
 
-## Configuration
+## 🛠️ Technology Stack
 
-Edit `js/config.js` to change API endpoint:
-- Production: `https://seekreap.onrender.com`
-- Development: `http://localhost:5000`
+- **Python 3.9+** with Flask
+- **PostgreSQL** on Neon
+- **Redis** on Render
+- **RQ** for job queues
+- **Gunicorn** as WSGI server
 
-## Deployment on Render
-
-1. Push to GitHub
-2. Connect repository to Render
-3. Select "Static Site"
-4. Build command: `echo "Static site"`
-5. Publish directory: `.`
-
-## Structure
-
-- `index.html` - Home page
-- `upload.html` - File/URL upload
-- `verification.html` - Processing status
-- `results.html` - View processed video
-- `dashboard.html` - Job history
-- `css/` - Stylesheets
-- `js/` - JavaScript files
-Note: Frontend has been moved to separate repository: https://github.com/Brandsiya/seekreap-frontend
+## 📁 Project Structure
