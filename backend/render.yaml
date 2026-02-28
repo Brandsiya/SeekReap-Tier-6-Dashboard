@@ -1,0 +1,51 @@
+services:
+  - type: web
+    name: seekreap-backend
+    runtime: python
+    region: oregon
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: seekreap-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: seekreap-redis
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: FRONTEND_URL
+        value: https://seekreap-frontend.onrender.com
+
+  - type: worker
+    name: seekreap-worker
+    runtime: python
+    region: oregon
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python worker.py
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: seekreap-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: seekreap-redis
+          property: connectionString
+
+  - type: redis
+    name: seekreap-redis
+    region: oregon
+    plan: free
+    maxmemoryPolicy: noeviction
+
+databases:
+  - name: seekreap-db
+    region: oregon
+    plan: free
