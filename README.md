@@ -30,3 +30,4 @@ Edit `js/config.js` to change API endpoint:
 - `dashboard.html` - Job history
 - `css/` - Stylesheets
 - `js/` - JavaScript files
+Note: Frontend has been moved to separate repository: https://github.com/Brandsiya/seekreap-frontend
