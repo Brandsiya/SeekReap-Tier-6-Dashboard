@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - SeekReap</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        .dashboard-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-card {
+            background: #fff;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #3498db;
+        }
+        
+        .jobs-table {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .jobs-table table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .jobs-table th {
+            background: #f8f9fa;
+            padding: 1rem;
+            text-align: left;
+        }
+        
+        .jobs-table td {
+            padding: 1rem;
+            border-top: 1px solid #e9ecef;
+        }
+        
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .status-completed { background: #d4edda; color: #155724; }
+        .status-processing { background: #cce5ff; color: #004085; }
+        .status-failed { background: #f8d7da; color: #721c24; }
+        .status-pending { background: #fff3cd; color: #856404; }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/" class="nav-brand">SeekReap</a>
+            <div class="nav-links">
+                <a href="/upload.html" class="nav-link">Upload</a>
+                <a href="/dashboard.html" class="nav-link active">Dashboard</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="dashboard-container">
+        <h1>Dashboard</h1>
+        
+        <div class="stats-grid" id="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="total-jobs">0</div>
+                <div>Total Jobs</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="completed-jobs">0</div>
+                <div>Completed</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="processing-jobs">0</div>
+                <div>Processing</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="failed-jobs">0</div>
+                <div>Failed</div>
+            </div>
+        </div>
+        
+        <div class="jobs-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Job ID</th>
+                        <th>Content</th>
+                        <th>Status</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="jobs-table-body">
+                    <tr>
+                        <td colspan="5" style="text-align: center;">Loading jobs...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/dashboard.js"></script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: seekreap-frontend
+    runtime: static
+    buildCommand: echo "Static site"
+    staticPublishPath: .
+    headers:
+      - path: /*
+        name: Content-Type
+        value: text/html
+    routes:
+      - type: rewrite
+        source: /<.*>
+        destination: /index.html

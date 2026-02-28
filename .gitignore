@@ -1,7 +1,12 @@
-node_modules/
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Environment
 .env
-build/
-node_modules/
-.env
-build/
-frontend/.netlify/
+.env.local
