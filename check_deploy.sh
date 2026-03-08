@@ -1,17 +1,18 @@
 #!/bin/bash
 REGION="us-central1"
-BACKEND_URL="https://seekreap-backend-tif2gmgi4q-uc.a.run.app"
+# Tier-6 Endpoint
+DASHBOARD_URL="https://seekreap-backend-tif2gmgi4q-uc.a.run.app"
 
-echo "🔍 Checking SeekReap Services in $REGION..."
+echo "🚀 [Tier-6] Checking Dashboard/API Status..."
 echo "----------------------------------------"
-
-# Check Cloud Run Service Status
-gcloud run services list --region=$REGION --format="table(metadata.name,status.conditions[0].status,status.address.url)"
-
-echo ""
-echo "🌐 Testing Backend Health Endpoint..."
-curl -s -o /dev/null -w "HTTP Status: %{http_code}\n" "$BACKEND_URL/health"
+gcloud run services describe seekreap-backend --region=$REGION --format="table(status.conditions[0].status,status.address.url)"
+curl -s -o /dev/null -w "Health Check Status: %{http_code}\n" "$DASHBOARD_URL/health"
 
 echo ""
-echo "📜 Fetching latest Worker logs (last 5 lines)..."
+echo "⚙️ [Tier-5] Checking Worker Pool Status..."
+echo "----------------------------------------"
+gcloud run services describe seekreap-worker --region=$REGION --format="table(status.conditions[0].status,status.address.url)"
+
+echo ""
+echo "📜 Latest Worker Activity (Last 5 events):"
 gcloud logging read "resource.type=cloud_run_revision AND resource.labels.service_name=seekreap-worker" --limit=5 --format="value(textPayload)"

@@ -1,0 +1,61 @@
+# Git files
+.git
+.gitignore
+.github/
+
+# Python virtual environment
+venv/
+env/
+ENV/
+.venv/
+*.egg-info/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Python cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Logs and temp files
+*.log
+*.bak
+*.swp
+*.tmp
+temp/
+uploads/
+processed/
+
+# Local development files
+.env
+.env.local
+.flaskenv
+.DS_Store
+docker-compose.yml
+README.md
+
+# Testing and coverage
+tests/
+.coverage
+htmlcov/
+.pytest_cache/
+
+# IDE files
+.vscode/
+.idea/
+*.sublime-*
+
+# Backup directories (your existing structure)
+logs/
+archive/
+node_modules/
+node_modules_backup/
+
+# Keep the Dockerfile and cloudbuild.yaml (they're needed)
+!Dockerfile
+!cloudbuild.yaml
+!requirements.txt
+!app.py
+!db.py
