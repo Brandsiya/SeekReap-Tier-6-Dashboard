@@ -70,3 +70,88 @@ def analyze_video():
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
+
+# ---------------------------------------------------------------------------
+# CORS — allow Firebase Hosting origin
+# ---------------------------------------------------------------------------
+@app.after_request
+def add_cors(response):
+    origin = request.headers.get('Origin', '')
+    if 'seekreap' in origin or 'localhost' in origin:
+        response.headers['Access-Control-Allow-Origin'] = origin
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, X-Creator-ID'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+    return response
+
+@app.route('/api/creator/profile', methods=['GET', 'OPTIONS'])
+def creator_profile():
+    if request.method == 'OPTIONS':
+        return '', 204
+    firebase_uid = request.headers.get('X-Creator-ID', '').strip()
+    if not firebase_uid:
+        return jsonify({"error": "Missing X-Creator-ID header"}), 401
+    import uuid as _uuid
+    creator_uuid = str(_uuid.uuid5(_uuid.NAMESPACE_URL, firebase_uid))
+    try:
+        conn = psycopg2.connect(DB_URL)
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT id, email, name, subscription_tier, credits_remaining FROM creators WHERE id = %s",
+            (creator_uuid,)
+        )
+        row = cur.fetchone()
+        cur.close(); conn.close()
+        if not row:
+            return jsonify({"error": "Creator not found"}), 404
+        return jsonify({
+            "id":                 str(row[0]),
+            "email":              row[1] or "",
+            "name":               row[2] or "",
+            "subscription_tier":  row[3] or "free",
+            "credits_remaining":  row[4] or 0,
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/submissions', methods=['GET', 'OPTIONS'])
+def get_submissions():
+    if request.method == 'OPTIONS':
+        return '', 204
+    firebase_uid = request.headers.get('X-Creator-ID', '').strip()
+    if not firebase_uid:
+        return jsonify({"error": "Missing X-Creator-ID header"}), 401
+    import uuid as _uuid, json as _json
+    creator_uuid = str(_uuid.uuid5(_uuid.NAMESPACE_URL, firebase_uid))
+    try:
+        conn = psycopg2.connect(DB_URL)
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT id, content_url, status, overall_risk_score, risk_level,
+                   submitted_at, completed_at, metadata
+            FROM submissions
+            WHERE creator_id = %s
+            ORDER BY submitted_at DESC
+            LIMIT 50
+        """, (creator_uuid,))
+        rows = cur.fetchall()
+        cur.close(); conn.close()
+        submissions = []
+        for r in rows:
+            meta = r[7] or {}
+            if isinstance(meta, str):
+                try: meta = _json.loads(meta)
+                except: meta = {}
+            submissions.append({
+                "id":                  str(r[0]),
+                "content_url":         r[1] or "",
+                "status":              r[2] or "pending",
+                "overall_risk_score":  float(r[3]) if r[3] is not None else None,
+                "risk_level":          r[4] or "",
+                "submitted_at":        r[5].isoformat() if r[5] else None,
+                "completed_at":        r[6].isoformat() if r[6] else None,
+                "title":               meta.get("title", ""),
+                "channel":             meta.get("channel", ""),
+            })
+        return jsonify({"submissions": submissions, "total": len(submissions)})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
